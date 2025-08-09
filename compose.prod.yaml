@@ -19,6 +19,8 @@ services:
     environment:
       - ENVIRONMENT=production
       - DEBUG=false
+    networks:
+      - sd-network
 
   chrome:
     image: selenium/node-chrome:4.34.0-20250727
@@ -73,3 +75,6 @@ services:
 #   db-password:
 #     file: db/password.txt
 
+networks:
+  sd-network:
+    driver: bridge

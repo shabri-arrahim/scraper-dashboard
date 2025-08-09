@@ -497,7 +497,7 @@ if __name__ == "__main__":
             uvicorn.run(
                 "main:app",
                 host="0.0.0.0",  # Always bind to 0.0.0.0 in container
-                port=80,
+                port=8000,
                 workers=4,
                 reload=False,
                 access_log=True,

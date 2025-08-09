@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Script Management Dashboard{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.8"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      .status-running {
+        background: linear-gradient(45deg, #10b981, #34d399);
+        animation: pulse 2s infinite;
+      }
+
+      .status-stopped {
+        background: #6b7280;
+      }
+
+      .status-completed {
+        background: #059669;
+      }
+
+      .status-failed {
+        background: #dc2626;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+
+      .card-hover {
+        transition: all 0.3s ease;
+      }
+
+      .card-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+
+      .btn-primary {
+        background: linear-gradient(45deg, #10b981, #34d399);
+        transition: all 0.3s ease;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+      }
+
+      .btn-danger {
+        background: linear-gradient(45deg, #dc2626, #ef4444);
+        transition: all 0.3s ease;
+      }
+
+      .btn-danger:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+      }
+
+      .log-container {
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: "Monaco", "Consolas", monospace;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #10b981;
+        border-radius: 4px;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #059669;
+      }
+    </style>
+  </head>
+  <body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+      {% block content %} {% endblock %}
+    </div>
+
+    <!-- Log Modal -->
+    <div
+      id="logModal"
+      class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-xl max-w-4xl w-full max-h-[80vh] flex flex-col"
+      >
+        <div class="flex items-center justify-between p-6 border-b">
+          <h3 class="text-xl font-bold text-gray-800 flex items-center">
+            <i class="fas fa-terminal mr-3 text-emerald-500"></i>
+            <span id="logModalTitle">Script Logs</span>
+          </h3>
+          <button
+            onclick="closeLogModal()"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        <div class="flex-1 p-6">
+          <div
+            id="logContent"
+            class="bg-gray-900 text-green-400 p-4 rounded-lg log-container text-sm"
+          >
+            Loading logs...
+          </div>
+        </div>
+        <div class="p-6 border-t bg-gray-50 rounded-b-xl">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <div
+                id="logStatus"
+                class="w-2 h-2 bg-gray-400 rounded-full"
+              ></div>
+              <span class="text-sm text-gray-600"
+                >Status: <span id="logStatusText">Unknown</span></span
+              >
+            </div>
+            <div class="flex space-x-2">
+              <button
+                onclick="copyLogs()"
+                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm flex items-center"
+              >
+                <i class="fas fa-copy mr-2"></i>
+                Copy Logs
+              </button>
+              <button
+                onclick="refreshLogs()"
+                class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm flex items-center"
+              >
+                <i class="fas fa-sync-alt mr-2"></i>
+                Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Initialize or preserve currentScript in window scope
+      window.currentScript = window.currentScript || null;
+
+      async function copyLogs() {
+        const logContent = document.getElementById("logContent");
+        const logs = Array.from(logContent.children)
+          .map((div) => div.textContent)
+          .join("\n");
+
+        try {
+          await navigator.clipboard.writeText(logs);
+
+          // Show temporary success message
+          const copyBtn = document.querySelector(
+            'button[onclick="copyLogs()"]'
+          );
+          const originalHtml = copyBtn.innerHTML;
+          copyBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Copied!';
+          copyBtn.classList.remove("bg-blue-500", "hover:bg-blue-600");
+          copyBtn.classList.add("bg-green-500", "hover:bg-green-600");
+
+          setTimeout(() => {
+            copyBtn.innerHTML = originalHtml;
+            copyBtn.classList.remove("bg-green-500", "hover:bg-green-600");
+            copyBtn.classList.add("bg-blue-500", "hover:bg-blue-600");
+          }, 2000);
+        } catch (err) {
+          console.error("Failed to copy logs:", err);
+          alert("Failed to copy logs to clipboard");
+        }
+      }
+
+      function openLogModal(scriptName) {
+        window.currentScript = scriptName;
+        document.getElementById("logModal").classList.remove("hidden");
+        document.getElementById("logModalTitle").textContent =
+          scriptName + " - Logs";
+        loadLogs(scriptName);
+      }
+
+      function closeLogModal() {
+        document.getElementById("logModal").classList.add("hidden");
+        window.currentScript = null;
+      }
+
+      function refreshLogs() {
+        if (window.currentScript) {
+          loadLogs(window.currentScript);
+        }
+      }
+
+      async function loadLogs(scriptName) {
+        try {
+          const response = await fetch(`/scripts/${scriptName}/logs`);
+          const data = await response.json();
+
+          const logContent = document.getElementById("logContent");
+          const statusIndicator = document.getElementById("logStatus");
+          const statusText = document.getElementById("logStatusText");
+
+          if (data.logs.length === 0) {
+            logContent.innerHTML =
+              '<div class="text-gray-400 text-center py-8">No logs available</div>';
+          } else {
+            logContent.innerHTML = data.logs
+              .map((log) => `<div class="mb-1">${log}</div>`)
+              .join("");
+            logContent.scrollTop = logContent.scrollHeight;
+          }
+
+          // Update status
+          statusText.textContent = data.status;
+          statusIndicator.className = `w-2 h-2 rounded-full status-${data.status}`;
+        } catch (error) {
+          document.getElementById("logContent").innerHTML =
+            '<div class="text-red-400">Error loading logs</div>';
+        }
+      }
+
+      // Auto-refresh script list every 5 seconds
+      setInterval(() => {
+        htmx.trigger("#script-list", "refresh");
+      }, 5000);
+
+      // Auto-refresh logs every 3 seconds when modal is open
+      setInterval(() => {
+        if (
+          window.currentScript &&
+          !document.getElementById("logModal").classList.contains("hidden")
+        ) {
+          loadLogs(window.currentScript);
+        }
+      }, 3000);
+
+      // Close modal when clicking outside
+      document
+        .getElementById("logModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) {
+            closeLogModal();
+          }
+        });
+
+      // Show loading states
+      document.body.addEventListener("htmx:beforeRequest", function (e) {
+        const btn = e.target;
+        if (btn.tagName === "BUTTON") {
+          btn.disabled = true;
+          btn.innerHTML =
+            '<i class="fas fa-spinner fa-spin mr-2"></i>Loading...';
+        }
+      });
+
+      document.body.addEventListener("htmx:afterRequest", function (e) {
+        const btn = e.target;
+        if (btn.tagName === "BUTTON") {
+          setTimeout(() => {
+            btn.disabled = false;
+          }, 1000);
+        }
+      });
+    </script>
+  </body>
+</html>

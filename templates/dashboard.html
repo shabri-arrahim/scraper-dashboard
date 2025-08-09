@@ -1,0 +1,381 @@
+{% extends "base.html" %} {% block content %}
+<div class="max-w-6xl mx-auto">
+  <!-- Header -->
+  <div class="text-center mb-12">
+    <div class="flex items-center justify-center mb-6">
+      <div
+        class="bg-gradient-to-r from-emerald-500 to-teal-600 p-4 rounded-full shadow-lg"
+      >
+        <i class="fas fa-code text-white text-3xl"></i>
+      </div>
+    </div>
+    <h1 class="text-4xl font-bold text-gray-800 mb-4">
+      Script Management Dashboard
+    </h1>
+    <p class="text-gray-600 text-lg">
+      Manage and monitor your Python scripts with real-time updates
+    </p>
+
+    <!-- Telegram Status -->
+    {% if telegram_configured %}
+    <div
+      class="inline-flex items-center bg-emerald-100 text-emerald-800 px-4 py-2 rounded-full mt-4"
+    >
+      <i class="fab fa-telegram-plane mr-2"></i>
+      <span class="text-sm font-medium">Telegram notifications enabled</span>
+    </div>
+    {% else %}
+    <div
+      class="inline-flex items-center bg-amber-100 text-amber-800 px-4 py-2 rounded-full mt-4"
+    >
+      <i class="fas fa-exclamation-triangle mr-2"></i>
+      <span class="text-sm font-medium"
+        >Configure Telegram for notifications</span
+      >
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="mb-12">
+    <div class="border-b border-gray-200">
+      <nav class="flex space-x-8" aria-label="Tabs">
+        <button
+          onclick="switchTab('downloads')"
+          id="downloads-tab"
+          class="tab-button border-emerald-500 text-emerald-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+        >
+          <i class="fas fa-download mr-2"></i>
+          Downloads
+        </button>
+        <button
+          onclick="switchTab('scripts')"
+          id="scripts-tab"
+          class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+        >
+          <i class="fas fa-list-ul mr-2"></i>
+          Scripts
+        </button>
+        <button
+          onclick="switchTab('assets')"
+          id="assets-tab"
+          class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+        >
+          <i class="fas fa-folder mr-2"></i>
+          Script Assets
+        </button>
+      </nav>
+    </div>
+
+    <!-- Content Sections -->
+    <div class="mt-8">
+      <!-- Download List Section -->
+      <div id="downloads-section" class="bg-white rounded-2xl shadow-xl p-8">
+        <div class="flex items-center justify-between mb-8">
+          <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+            <i class="fas fa-download mr-3 text-blue-500"></i>
+            Downloaded Files
+          </h2>
+          <div class="flex items-center space-x-4">
+            <label
+              class="btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center cursor-pointer"
+            >
+              <i class="fas fa-upload mr-2"></i>
+              Upload File
+              <input
+                type="file"
+                accept=".csv,.xlsx,.json"
+                class="hidden"
+                onchange="handleFileUpload(this)"
+              />
+            </label>
+            <div class="flex items-center space-x-2">
+              <div
+                class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"
+              ></div>
+              <span class="text-sm text-gray-500">Live updates</span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="overflow-y-auto max-h-[calc(100vh-24rem)] pr-2 -mr-2 custom-scrollbar"
+        >
+          <div
+            id="download-list"
+            hx-get="/downloads"
+            hx-trigger="load, refresh"
+          >
+            {% include "components/download_list.html" %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Scripts Section -->
+      <div
+        id="scripts-section"
+        class="bg-white rounded-2xl shadow-xl p-8 hidden"
+      >
+        <div class="flex items-center justify-between mb-8">
+          <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+            <i class="fas fa-list-ul mr-3 text-emerald-500"></i>
+            Available Scripts
+          </h2>
+          <div class="flex items-center space-x-2">
+            <div
+              class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"
+            ></div>
+            <span class="text-sm text-gray-500">Live updates</span>
+          </div>
+        </div>
+
+        <div
+          class="overflow-y-auto max-h-[calc(100vh-24rem)] pr-2 -mr-2 custom-scrollbar"
+        >
+          <div id="script-list" hx-get="/scripts" hx-trigger="load, refresh">
+            {% include "components/script_list.html" %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Script Assets Section -->
+      <div
+        id="assets-section"
+        class="bg-white rounded-2xl shadow-xl p-8 hidden"
+      >
+        <div class="flex items-center justify-between mb-8">
+          <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+            <i class="fas fa-folder mr-3 text-blue-500"></i>
+            Script Assets
+          </h2>
+          <div class="flex items-center space-x-4">
+            <label
+              class="btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center cursor-pointer"
+            >
+              <i class="fas fa-upload mr-2"></i>
+              Upload Asset
+              <input
+                type="file"
+                class="hidden"
+                onchange="handleAssetUpload(this)"
+              />
+            </label>
+            <div class="flex items-center space-x-2">
+              <div
+                class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"
+              ></div>
+              <span class="text-sm text-gray-500">Live updates</span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="overflow-y-auto max-h-[calc(100vh-24rem)] pr-2 -mr-2 custom-scrollbar"
+        >
+          <div id="assets-list" hx-get="/assets" hx-trigger="load, refresh">
+            {% include "components/assets_list.html" %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Instructions -->
+  <div class="mt-12 grid md:grid-cols-2 gap-8">
+    <div class="bg-white rounded-xl p-6 shadow-lg">
+      <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+        <i class="fas fa-rocket mr-3 text-blue-500"></i>
+        Quick Start
+      </h3>
+      <ul class="space-y-2 text-gray-600">
+        <li class="flex items-center">
+          <i class="fas fa-check text-emerald-500 mr-2"></i>
+          Add Python scripts to the
+          <code class="bg-gray-100 px-2 py-1 rounded">scripts/</code> directory
+        </li>
+        <li class="flex items-center">
+          <i class="fas fa-check text-emerald-500 mr-2"></i>
+          Click start/stop buttons to manage script execution
+        </li>
+        <li class="flex items-center">
+          <i class="fas fa-check text-emerald-500 mr-2"></i>
+          View real-time logs and status updates
+        </li>
+      </ul>
+    </div>
+
+    <div class="bg-white rounded-xl p-6 shadow-lg">
+      <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+        <i class="fab fa-telegram-plane mr-3 text-blue-500"></i>
+        Telegram Setup
+      </h3>
+      <ul class="space-y-2 text-gray-600">
+        <li class="flex items-start">
+          <i class="fas fa-circle text-xs text-gray-400 mr-3 mt-2"></i>
+          <span
+            >Message
+            <code class="bg-gray-100 px-2 py-1 rounded">@BotFather</code> to
+            create a bot</span
+          >
+        </li>
+        <li class="flex items-start">
+          <i class="fas fa-circle text-xs text-gray-400 mr-3 mt-2"></i>
+          <span
+            >Get your chat ID from
+            <code class="bg-gray-100 px-2 py-1 rounded"
+              >@userinfobot</code
+            ></span
+          >
+        </li>
+        <li class="flex items-start">
+          <i class="fas fa-circle text-xs text-gray-400 mr-3 mt-2"></i>
+          <span
+            >Update the
+            <code class="bg-gray-100 px-2 py-1 rounded">.env</code> file with
+            your credentials</span
+          >
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function handleAssetUpload(input) {
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const uploadButton = input.parentElement;
+      const originalHtml = uploadButton.innerHTML;
+      uploadButton.innerHTML =
+        '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
+      uploadButton.disabled = true;
+
+      const response = await fetch("/assets/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        uploadButton.innerHTML = '<i class="fas fa-check mr-2"></i>Uploaded!';
+        uploadButton.classList.remove("btn-primary");
+        uploadButton.classList.add("bg-green-500", "hover:bg-green-600");
+
+        htmx.trigger("#assets-list", "refresh");
+
+        setTimeout(() => {
+          uploadButton.innerHTML = originalHtml;
+          uploadButton.classList.remove("bg-green-500", "hover:bg-green-600");
+          uploadButton.classList.add("btn-primary");
+          uploadButton.disabled = false;
+          input.value = "";
+        }, 2000);
+      } else {
+        throw new Error(result.error || "Upload failed");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert(error.message || "Failed to upload asset. Please try again.");
+
+      uploadButton.innerHTML = originalHtml;
+      uploadButton.disabled = false;
+      input.value = "";
+    }
+  }
+
+  function downloadAsset(assetName) {
+    window.open(`${window.location.origin}/assets/${assetName}`, "_blank");
+  }
+
+  async function handleFileUpload(input) {
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const uploadButton = input.parentElement;
+      const originalHtml = uploadButton.innerHTML;
+      uploadButton.innerHTML =
+        '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
+      uploadButton.disabled = true;
+
+      const response = await fetch("/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Show success message
+        uploadButton.innerHTML = '<i class="fas fa-check mr-2"></i>Uploaded!';
+        uploadButton.classList.remove("btn-primary");
+        uploadButton.classList.add("bg-green-500", "hover:bg-green-600");
+
+        // Refresh the downloads list
+        htmx.trigger("#download-list", "refresh");
+
+        // Reset the button after 2 seconds
+        setTimeout(() => {
+          uploadButton.innerHTML = originalHtml;
+          uploadButton.classList.remove("bg-green-500", "hover:bg-green-600");
+          uploadButton.classList.add("btn-primary");
+          uploadButton.disabled = false;
+          input.value = ""; // Reset the file input
+        }, 2000);
+      } else {
+        throw new Error(result.error || "Upload failed");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert(error.message || "Failed to upload file. Please try again.");
+
+      // Reset the button
+      uploadButton.innerHTML = originalHtml;
+      uploadButton.disabled = false;
+      input.value = ""; // Reset the file input
+    }
+  }
+
+  function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll(".tab-button").forEach((button) => {
+      if (button.id === `${tabName}-tab`) {
+        button.classList.remove("text-gray-500", "border-transparent");
+        button.classList.add("border-emerald-500", "text-emerald-600");
+      } else {
+        button.classList.remove("border-emerald-500", "text-emerald-600");
+        button.classList.add("text-gray-500", "border-transparent");
+      }
+    });
+
+    // Update content sections
+    document
+      .querySelectorAll("#downloads-section, #scripts-section, #assets-section")
+      .forEach((section) => {
+        if (section.id === `${tabName}-section`) {
+          section.classList.remove("hidden");
+        } else {
+          section.classList.add("hidden");
+        }
+      });
+
+    // Trigger a refresh on the visible section
+    if (tabName === "downloads") {
+      htmx.trigger("#download-list", "refresh");
+    } else if (tabName === "scripts") {
+      htmx.trigger("#script-list", "refresh");
+    } else if (tabName === "assets") {
+      htmx.trigger("#assets-list", "refresh");
+    }
+  }
+</script>
+{% endblock %}

@@ -51,6 +51,6 @@ jobs:
 
             cd /home/nino/scraper-dashboard
             git pull origin develop
-            docker-compose -f compose.yaml down --remove-orphans
-            docker-compose -f compose.yaml up --build -d
+            docker compose -f compose.yaml down --remove-orphans
+            docker compose -f compose.yaml up --build -d
             docker rmi $(docker images -f "dangling=true" -q)

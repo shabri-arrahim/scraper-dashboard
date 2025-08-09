@@ -15,6 +15,7 @@ services:
       - .env
     depends_on:
       - selenium-hub
+    container_name: scraper-dash
     ports:
       - 9000:8000
 

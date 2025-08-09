@@ -27,6 +27,16 @@
 
       <!-- Actions -->
       <div class="flex items-center space-x-3">
+        <!-- Delete Button -->
+        <button
+          class="btn-danger text-white px-4 py-2 rounded-lg font-medium flex items-center"
+          hx-delete="/downloads/{{ content.name }}"
+          hx-target="#download-list"
+          hx-confirm="Are you sure you want to delete this download?"
+        >
+          <i class="fas fa-trash-alt mr-2"></i>
+          Delete
+        </button>
         <!-- Download button -->
         <button
           class="btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center"

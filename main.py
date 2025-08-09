@@ -373,6 +373,20 @@ async def get_contents_to_download(request: Request):
     )
 
 
+@app.delete("/downloads/{filename}")
+async def delete_download(filename: str):
+    """Delete a downloaded file"""
+    try:
+        file_path = Path(config.DOWNLOAD_DIR) / filename
+        if file_path.exists():
+            file_path.unlink()
+            return {"success": True}
+        else:
+            raise HTTPException(status_code=404, detail="File not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
+
+
 def get_script_status(script_name: str) -> str:
     """Get current status of a script"""
     if script_name in script_status:

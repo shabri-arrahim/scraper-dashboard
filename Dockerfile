@@ -68,7 +68,7 @@ COPY . .
 RUN --mount=type=cache,target=/appuser/.cache/uv,uid=10001 \
     uv sync --locked
 
-# EXPOSE 8000
+EXPOSE 80
 
 # Run the application.
 CMD [ "uv", "run", "main.py" ]

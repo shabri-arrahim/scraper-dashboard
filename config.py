@@ -38,7 +38,6 @@ class Config:
     # Application Settings
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
-    SCRIPTS_DIR = os.getenv("SCRIPTS_DIR", "scripts")
     MAX_LOG_LINES = int(os.getenv("MAX_LOG_LINES", "1000"))
     DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 

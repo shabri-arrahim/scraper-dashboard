@@ -41,22 +41,15 @@ class Config:
             os.makedirs(scripts_dir)
 
         # check if the download directory exists in user's home directory
-        downloads_path = os.path.join(os.path.dirname(__file__), "downloads")
+        downloads_path = os.path.join(os.path.expanduser("~"), "downloads")
         if not os.path.exists(downloads_path):
             # create the directory if it does not exist
             os.makedirs(downloads_path)
 
-        scripts_assets_path = os.path.join(
-            os.path.dirname(__file__), "scripts", "dependencies"
-        )
+        scripts_assets_path = os.path.join(os.path.expanduser("~"), "static", "scripts")
         if not os.path.exists(scripts_assets_path):
             # create the scripts assets directory if it does not exist
             os.makedirs(scripts_assets_path, exist_ok=True)
-
-        # Create static directory for assets
-        static_path = os.path.join(os.path.dirname(__file__), "static")
-        if not os.path.exists(static_path):
-            os.makedirs(static_path, exist_ok=True)
 
         self.SCRIPTS_DIR = scripts_dir
         self.DOWNLOAD_DIR = downloads_path

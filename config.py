@@ -43,7 +43,12 @@ class Config:
     DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
     def __init__(self):
-        for path in [self.SCRIPTS_DIR, self.DOWNLOAD_DIR, self.SCRIPTS_ASSETS_DIR]:
+        for path in [
+            self.SOURCES_DIR,
+            self.SCRIPTS_DIR,
+            self.DOWNLOAD_DIR,
+            self.SCRIPTS_ASSETS_DIR,
+        ]:
             if not os.path.exists(path):
                 os.makedirs(path, exist_ok=True)
 

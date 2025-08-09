@@ -25,6 +25,15 @@
 
       <!-- Actions -->
       <div class="flex items-center space-x-3">
+        <!-- Delete Button -->
+        <button
+          class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center"
+          onclick="deleteScript('{{ script.name }}')"
+          {% if script.status == 'running' %}disabled{% endif %}
+        >
+          <i class="fas fa-trash-alt mr-2"></i>
+          Delete
+        </button>
         <!-- View Logs Button -->
         {% if script.has_logs %}
         <button

@@ -7,15 +7,34 @@ from pathlib import Path
 from typing import Dict, List
 import shutil
 import httpx
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, UploadFile, File
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import (
+    FastAPI,
+    Request,
+    HTTPException,
+    BackgroundTasks,
+    UploadFile,
+    File,
+    Depends,
+    Cookie,
+)
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+
+from middleware.auth import require_auth
+from middleware.security import setup_middleware
 from collections import deque
 
 from config import config
 
 app = FastAPI(title="Script Management Dashboard")
 templates = Jinja2Templates(directory="templates")
+
+# Set up security middleware
+setup_middleware(app)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Global storage for running processes and logs
 running_processes: Dict[str, subprocess.Popen] = {}
@@ -82,7 +101,41 @@ def monitor_process(script_name: str, process: subprocess.Popen):
     threading.Timer(5.0, lambda: script_status.pop(script_name, None)).start()
 
 
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, error: str = None):
+    """Login page"""
+    return templates.TemplateResponse(
+        "login.html", {"request": request, "error": error}
+    )
+
+
+@app.post("/login")
+async def login(request: Request):
+    """Handle login"""
+    form = await request.form()
+    token = form.get("token")
+
+    if not token or token != config.API_TOKEN:
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": "Invalid token"},
+            status_code=401,
+        )
+
+    response = RedirectResponse(url="/", status_code=302)
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=86400,  # 24 hours
+    )
+    return response
+
+
 @app.get("/", response_class=HTMLResponse)
+@require_auth
 async def dashboard(request: Request):
     """Main dashboard page"""
     scripts_path = Path(config.SCRIPTS_DIR)
@@ -131,6 +184,59 @@ async def get_scripts(request: Request):
     return templates.TemplateResponse(
         "components/script_list.html", {"request": request, "scripts": scripts}
     )
+
+
+@app.post("/scripts/upload")
+async def upload_script(file: UploadFile = File(...)):
+    """Handle script upload"""
+    try:
+        # Validate file extension
+        if not file.filename.endswith(".py"):
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Only Python (.py) files are allowed"},
+            )
+
+        # Save file to scripts directory
+        file_path = Path(config.SCRIPTS_DIR) / file.filename
+        with file_path.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        return {"success": True, "filename": file.filename}
+    except Exception as e:
+        return JSONResponse(
+            status_code=500, content={"error": f"Failed to upload script: {str(e)}"}
+        )
+
+
+@app.delete("/scripts/{script_name}")
+async def delete_script(script_name: str):
+    """Delete a script"""
+    try:
+        # Check if script is running
+        if script_name in running_processes:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Cannot delete script while it's running"},
+            )
+
+        script_path = Path(config.SCRIPTS_DIR) / script_name
+        if script_path.exists():
+            script_path.unlink()
+
+            # Clean up any logs
+            if script_name in script_logs:
+                del script_logs[script_name]
+            if script_name in script_status:
+                del script_status[script_name]
+
+            return {"success": True}
+        else:
+            return JSONResponse(status_code=404, content={"error": "Script not found"})
+    except Exception as e:
+        return JSONResponse(
+            status_code=500, content={"error": f"Failed to delete script: {str(e)}"}
+        )
 
 
 @app.post("/upload")
@@ -257,7 +363,7 @@ async def get_contents_to_download(request: Request):
                         "last_modified": datetime.fromtimestamp(
                             content_file.stat().st_mtime
                         ).strftime("%Y-%m-%d %H:%M:%S"),
-                        "download_url": f"{config.DOWNLOAD_DIR}/{content_file.name}",
+                        "download_url": f"/download/{content_file.name}",
                     }
                 )
 
@@ -365,6 +471,18 @@ async def get_logs(script_name: str):
 
     logs = list(script_logs[script_name])
     return {"logs": logs, "status": get_script_status(script_name)}
+
+
+@app.get("/download/{filename}")
+async def download_file(filename: str):
+    """Download a file from the download directory"""
+    file_path = Path(config.DOWNLOAD_DIR) / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(
+        path=file_path, filename=filename, media_type="application/octet-stream"
+    )
 
 
 if __name__ == "__main__":

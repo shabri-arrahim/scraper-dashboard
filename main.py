@@ -40,18 +40,25 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 running_processes: Dict[str, subprocess.Popen] = {}
 script_logs: Dict[str, deque] = {}
 script_status: Dict[str, str] = {}
+status_lock = threading.Lock()  # Lock for thread-safe status updates
 
 
 class LogCapture:
-    def __init__(self, script_name: str):
+    def __init__(self, script_name: str, max_lines: int = 1000):
         self.script_name = script_name
-        self.logs = deque(maxlen=config.MAX_LOG_LINES)
-        script_logs[script_name] = self.logs
-
+        self.max_lines = max_lines
+        script_logs[script_name] = deque(maxlen=max_lines)
+        
     def write(self, data: str):
-        if data.strip():
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            self.logs.append(f"[{timestamp}] {data.strip()}")
+        try:
+            if data.strip() and self.script_name in script_logs:
+                timestamp = datetime.now().strftime("%H:%M:%S")
+                script_logs[self.script_name].append(f"[{timestamp}] {data.strip()}")
+        except Exception as e:
+            print(f"Error writing to log for {self.script_name}: {e}")
+            
+    def flush(self):
+        pass  # Required for file-like objects
 
 
 async def send_telegram_notification(message: str):
@@ -74,31 +81,48 @@ async def send_telegram_notification(message: str):
 
 def monitor_process(script_name: str, process: subprocess.Popen):
     """Monitor process completion and send notifications"""
-    process.wait()
-
-    if script_name in running_processes:
-        del running_processes[script_name]
-
-    if process.returncode == 0:
-        script_status[script_name] = "completed"
-        message = f"✅ Script <b>{script_name}</b> completed successfully"
-    else:
-        script_status[script_name] = "failed"
-        message = (
-            f"❌ Script <b>{script_name}</b> failed with exit code {process.returncode}"
-        )
-
-    # Create a new event loop for the async operation in this thread
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     try:
-        # Run the notification in the new event loop
-        loop.run_until_complete(send_telegram_notification(message))
-    finally:
-        loop.close()
-
-    # Reset status after 5 seconds
-    threading.Timer(5.0, lambda: script_status.pop(script_name, None)).start()
+        process.wait()
+        
+        if script_name in running_processes:
+            del running_processes[script_name]
+        
+        if process.returncode == 0:
+            script_status[script_name] = "completed"
+            message = f"✅ Script <b>{script_name}</b> completed successfully"
+        else:
+            script_status[script_name] = "failed"
+            message = f"❌ Script <b>{script_name}</b> failed with exit code {process.returncode}"
+            
+        # Create a new event loop for the async operation in this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(send_telegram_notification(message))
+        finally:
+            loop.close()
+            
+        # Reset status after 30 seconds to ensure UI can show the final status
+        threading.Timer(30.0, lambda: script_status.pop(script_name, None)).start()
+            
+    except Exception as e:
+        print(f"Error monitoring process {script_name}: {e}")
+        if script_name in running_processes:
+            del running_processes[script_name]
+        script_status[script_name] = "error"
+        
+        # Create a new event loop for the error notification
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(
+                send_telegram_notification(f"⚠️ Script <b>{script_name}</b> encountered an error: {str(e)}")
+            )
+        finally:
+            loop.close()
+            
+        # Reset error status after 30 seconds
+        threading.Timer(30.0, lambda: script_status.pop(script_name, None)).start()
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -389,11 +413,12 @@ async def delete_download(filename: str):
 
 def get_script_status(script_name: str) -> str:
     """Get current status of a script"""
-    if script_name in script_status:
-        return script_status[script_name]
-    if script_name in running_processes:
-        return "running"
-    return "stopped"
+    with status_lock:
+        if script_name in script_status:
+            return script_status[script_name]
+        if script_name in running_processes:
+            return "running"
+        return "stopped"
 
 
 @app.post("/scripts/{script_name}/start")
@@ -410,23 +435,35 @@ async def start_script(script_name: str, background_tasks: BackgroundTasks):
         # Initialize log capture
         log_capture = LogCapture(script_name)
 
-        # Start the process
+        # Start the process with unbuffered output
         process = subprocess.Popen(
-            ["python", str(script_path)],
+            ["python", "-u", str(script_path)],  # -u for unbuffered output
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
-            bufsize=1,
+            bufsize=0,  # Completely unbuffered
+            env={**os.environ, 'PYTHONUNBUFFERED': '1'}  # Force Python to be unbuffered
         )
 
         running_processes[script_name] = process
 
-        # Start log capture in background
+        # Start log capture in background with error handling
         def capture_output():
-            for line in process.stdout:
-                log_capture.write(line)
+            try:
+                while True:
+                    line = process.stdout.readline()
+                    if not line and process.poll() is not None:
+                        break
+                    if line:
+                        log_capture.write(line)
+            except Exception as e:
+                print(f"Error in log capture thread for {script_name}: {e}")
+                script_status[script_name] = "error"
+            finally:
+                process.stdout.close()
 
-        threading.Thread(target=capture_output, daemon=True).start()
+        log_thread = threading.Thread(target=capture_output, daemon=True)
+        log_thread.start()
 
         # Monitor process completion
         threading.Thread(

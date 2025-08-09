@@ -146,7 +146,11 @@
         <div
           class="overflow-y-auto max-h-[calc(100vh-24rem)] pr-2 -mr-2 custom-scrollbar"
         >
-          <div id="script-list" hx-get="/scripts" hx-trigger="load, refresh">
+          <div
+            id="script-list"
+            hx-get="/scripts"
+            hx-trigger="load, every 5s, refresh"
+          >
             {% include "components/script_list.html" %}
           </div>
         </div>

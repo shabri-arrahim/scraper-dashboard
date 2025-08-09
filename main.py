@@ -488,4 +488,7 @@ async def download_file(filename: str):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=config.DEBUG)
+    if config.ENVIRONTMENT == "local":
+        uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=config.DEBUG)
+    elif config.ENVIRONTMENT == "production":
+        uvicorn.run("main:app", host=config.ALLOWED_HOSTS[0], port=80, reload=False)

@@ -16,6 +16,9 @@ services:
     depends_on:
       - selenium-hub
     container_name: scraper-dash
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
 
   chrome:
     image: selenium/node-chrome:4.34.0-20250727

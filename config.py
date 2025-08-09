@@ -5,7 +5,7 @@ load_dotenv()
 
 
 class Config:
-    ENVIRONTMENT = os.getenv("ENVIRONMENT", "local").lower()
+    ENVIRONMENT = os.getenv("ENVIRONMENT", "local").lower()
     # Security Settings
     API_TOKEN = os.getenv("API_TOKEN", "")
     ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")

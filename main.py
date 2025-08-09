@@ -488,7 +488,21 @@ async def download_file(filename: str):
 if __name__ == "__main__":
     import uvicorn
 
-    if config.ENVIRONTMENT == "local":
-        uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=config.DEBUG)
-    elif config.ENVIRONTMENT == "production":
-        uvicorn.run("main:app", host=config.ALLOWED_HOSTS[0], port=80, reload=False)
+    try:
+        environment = config.ENVIRONMENT
+        if environment == "local":
+            uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=config.DEBUG)
+        else:
+            # Production settings
+            uvicorn.run(
+                "main:app",
+                host="0.0.0.0",  # Always bind to 0.0.0.0 in container
+                port=80,
+                workers=4,
+                reload=False,
+                access_log=True,
+                log_level="info",
+            )
+    except Exception as e:
+        print(f"Failed to start application: {e}")
+        raise

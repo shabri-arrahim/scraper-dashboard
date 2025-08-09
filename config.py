@@ -12,6 +12,13 @@ class Config:
     CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
     RATE_LIMIT = int(os.getenv("RATE_LIMIT", "100"))  # Requests per minute
 
+    # Ensure HOME_DIR is set to the user's home directory
+    HOME_DIR = os.path.expanduser("~")
+    SOURCES_DIR = os.path.join(HOME_DIR, ".scraper_dash")
+    DOWNLOAD_DIR = os.path.join(SOURCES_DIR, "downloads")
+    SCRIPTS_DIR = os.path.join(SOURCES_DIR, "scripts")
+    SCRIPTS_ASSETS_DIR = os.path.join(SOURCES_DIR, "static", "scripts")
+
     # Security Headers
     SECURITY_HEADERS = {
         "X-Frame-Options": "DENY",
@@ -36,30 +43,9 @@ class Config:
     DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
     def __init__(self):
-        # Ensure the scripts directory exists
-        scripts_dir = os.path.join(os.path.expanduser("~"), self.SCRIPTS_DIR)
-        if not os.path.exists(scripts_dir):
-            os.makedirs(scripts_dir)
-
-        # check if the download directory exists in user's home directory
-        downloads_path = os.path.join(os.path.expanduser("~"), "downloads")
-        if not os.path.exists(downloads_path):
-            # create the directory if it does not exist
-            os.makedirs(downloads_path)
-
-        scripts_assets_path = os.path.join(os.path.expanduser("~"), "static", "scripts")
-        if not os.path.exists(scripts_assets_path):
-            # create the scripts assets directory if it does not exist
-            os.makedirs(scripts_assets_path, exist_ok=True)
-
-        # cxreate static directory for assets
-        static_path = os.path.join(os.path.dirname("__file__"), "static")
-        if not os.path.exists(static_path):
-            os.makedirs(static_path, exist_ok=True)
-
-        self.SCRIPTS_DIR = scripts_dir
-        self.DOWNLOAD_DIR = downloads_path
-        self.SCRIPTS_ASSETS_DIR = scripts_assets_path
+        for path in [self.SCRIPTS_DIR, self.DOWNLOAD_DIR, self.SCRIPTS_ASSETS_DIR]:
+            if not os.path.exists(path):
+                os.makedirs(path, exist_ok=True)
 
 
 config = Config()

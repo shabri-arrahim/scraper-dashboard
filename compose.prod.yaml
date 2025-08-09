@@ -21,6 +21,8 @@ services:
       - DEBUG=false
     networks:
       - sd-network
+    volumes:
+      - ${HOME}/.scraper_dash:/home/appuser/.scraper_dash
 
   chrome:
     image: selenium/node-chrome:4.34.0-20250727

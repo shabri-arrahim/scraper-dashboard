@@ -2,6 +2,8 @@ import os
 import subprocess
 import asyncio
 import threading
+import time
+import signal
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
@@ -48,7 +50,7 @@ class LogCapture:
         self.script_name = script_name
         self.max_lines = max_lines
         script_logs[script_name] = deque(maxlen=max_lines)
-        
+
     def write(self, data: str):
         try:
             if data.strip() and self.script_name in script_logs:
@@ -56,7 +58,7 @@ class LogCapture:
                 script_logs[self.script_name].append(f"[{timestamp}] {data.strip()}")
         except Exception as e:
             print(f"Error writing to log for {self.script_name}: {e}")
-            
+
     def flush(self):
         pass  # Required for file-like objects
 
@@ -83,17 +85,18 @@ def monitor_process(script_name: str, process: subprocess.Popen):
     """Monitor process completion and send notifications"""
     try:
         process.wait()
-        
-        if script_name in running_processes:
-            del running_processes[script_name]
-        
-        if process.returncode == 0:
-            script_status[script_name] = "completed"
-            message = f"✅ Script <b>{script_name}</b> completed successfully"
-        else:
-            script_status[script_name] = "failed"
-            message = f"❌ Script <b>{script_name}</b> failed with exit code {process.returncode}"
-            
+
+        with status_lock:
+            if script_name in running_processes:
+                del running_processes[script_name]
+
+            if process.returncode == 0:
+                script_status[script_name] = "completed"
+                message = f"✅ Script <b>{script_name}</b> completed successfully"
+            else:
+                script_status[script_name] = "failed"
+                message = f"❌ Script <b>{script_name}</b> failed with exit code {process.returncode}"
+
         # Create a new event loop for the async operation in this thread
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -101,26 +104,28 @@ def monitor_process(script_name: str, process: subprocess.Popen):
             loop.run_until_complete(send_telegram_notification(message))
         finally:
             loop.close()
-            
+
         # Reset status after 30 seconds to ensure UI can show the final status
         threading.Timer(30.0, lambda: script_status.pop(script_name, None)).start()
-            
+
     except Exception as e:
         print(f"Error monitoring process {script_name}: {e}")
         if script_name in running_processes:
             del running_processes[script_name]
         script_status[script_name] = "error"
-        
+
         # Create a new event loop for the error notification
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             loop.run_until_complete(
-                send_telegram_notification(f"⚠️ Script <b>{script_name}</b> encountered an error: {str(e)}")
+                send_telegram_notification(
+                    f"⚠️ Script <b>{script_name}</b> encountered an error: {str(e)}"
+                )
             )
         finally:
             loop.close()
-            
+
         # Reset error status after 30 seconds
         threading.Timer(30.0, lambda: script_status.pop(script_name, None)).start()
 
@@ -424,8 +429,14 @@ def get_script_status(script_name: str) -> str:
 @app.post("/scripts/{script_name}/start")
 async def start_script(script_name: str, background_tasks: BackgroundTasks):
     """Start a Python script"""
-    if script_name in running_processes:
-        raise HTTPException(status_code=400, detail="Script is already running")
+    with status_lock:
+        if script_name in running_processes:
+            if running_processes[script_name].poll() is None:
+                # Process is still running
+                raise HTTPException(status_code=400, detail="Script is already running")
+            else:
+                # Process has ended but wasn't cleaned up
+                del running_processes[script_name]
 
     script_path = Path(config.SCRIPTS_DIR) / script_name
     if not script_path.exists():
@@ -435,14 +446,23 @@ async def start_script(script_name: str, background_tasks: BackgroundTasks):
         # Initialize log capture
         log_capture = LogCapture(script_name)
 
-        # Start the process with unbuffered output
+        # Start the process with unbuffered output and in its own process group
         process = subprocess.Popen(
             ["python", "-u", str(script_path)],  # -u for unbuffered output
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
             bufsize=0,  # Completely unbuffered
-            env={**os.environ, 'PYTHONUNBUFFERED': '1'}  # Force Python to be unbuffered
+            env={
+                **os.environ,
+                "PYTHONUNBUFFERED": "1",
+            },  # Force Python to be unbuffered
+            preexec_fn=(
+                os.setsid if os.name != "nt" else None
+            ),  # Create new process group on Unix
+            creationflags=(
+                subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+            ),  # Create new process group on Windows
         )
 
         running_processes[script_name] = process
@@ -450,19 +470,31 @@ async def start_script(script_name: str, background_tasks: BackgroundTasks):
         # Start log capture in background with error handling
         def capture_output():
             try:
-                while True:
+                while process.poll() is None:  # Continue while process is running
                     line = process.stdout.readline()
-                    if not line and process.poll() is not None:
-                        break
                     if line:
                         log_capture.write(line)
+                    else:
+                        # Small sleep to prevent CPU spinning
+                        time.sleep(0.1)
+
+                # Read any remaining output after process ends
+                for line in process.stdout:
+                    if line:
+                        log_capture.write(line)
+
             except Exception as e:
                 print(f"Error in log capture thread for {script_name}: {e}")
-                script_status[script_name] = "error"
+                with status_lock:
+                    script_status[script_name] = "error"
             finally:
-                process.stdout.close()
+                try:
+                    process.stdout.close()
+                except:
+                    pass
 
-        log_thread = threading.Thread(target=capture_output, daemon=True)
+        # Use non-daemon thread to ensure it keeps running
+        log_thread = threading.Thread(target=capture_output, daemon=False)
         log_thread.start()
 
         # Monitor process completion
@@ -484,24 +516,54 @@ async def start_script(script_name: str, background_tasks: BackgroundTasks):
 @app.post("/scripts/{script_name}/stop")
 async def stop_script(script_name: str, background_tasks: BackgroundTasks):
     """Stop a running script"""
-    if script_name not in running_processes:
-        raise HTTPException(status_code=400, detail="Script is not running")
-
     try:
-        process = running_processes[script_name]
+        with status_lock:
+            if script_name not in running_processes:
+                raise HTTPException(status_code=400, detail="Script is not running")
 
-        # Terminate process gracefully
-        process.terminate()
+            process = running_processes[script_name]
 
-        # Wait for termination, then force kill if needed
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
+            # Terminate process and its group gracefully
+            if os.name == "nt":
+                try:
+                    # Windows: Send Ctrl+C to process group
+                    process.send_signal(signal.CTRL_BREAK_EVENT)
+                except:
+                    process.terminate()
+            else:
+                try:
+                    # Unix: Send SIGTERM to process group
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                except:
+                    process.terminate()
 
-        del running_processes[script_name]
-        script_status[script_name] = "stopped"
+            # Wait for termination, then force kill if needed
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                # Force kill the process and its group
+                if os.name == "nt":
+                    process.kill()
+                else:
+                    try:
+                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                    except:
+                        process.kill()
+                process.wait()
+
+            # Don't delete script_logs to keep the logs viewable
+            del running_processes[script_name]
+            script_status[script_name] = "stopped"
+
+            # Send stop notification
+            background_tasks.add_task(
+                send_telegram_notification, f"⏹️ Script <b>{script_name}</b> stopped"
+            )
+
+            return {"status": "stopped"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to stop script: {str(e)}")
 
         # Send stop notification
         background_tasks.add_task(

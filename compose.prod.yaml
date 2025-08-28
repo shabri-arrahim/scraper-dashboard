@@ -34,6 +34,8 @@ services:
       dockerfile: ./docker/production/redis/Dockerfile
     image: scraper-dash-redis
     container_name: scraper-dash-redis
+    networks:
+      - sd-network
 
   celery-worker-main:
     <<: *server

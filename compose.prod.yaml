@@ -11,49 +11,53 @@ services:
   server:
     build:
       context: .
+      dockerfile: ./docker/production/Dockerfile
     env_file:
       - .env
-    container_name: scraper-dash
+    image: scraper-dash-fastapi
+    container_name: scraper-dash-fastapi
+    depends_on:
+      - redis
     environment:
       - ENVIRONMENT=production
       - DEBUG=false
     networks:
       - sd-network
     volumes:
-      - ${HOME}/.scraper_dash:/appuser/.scraper_dash
+      - ${HOME}/.scraper_dash:/sources
+    command: /start
 
-# The commented out section below is an example of how to define a PostgreSQL
-# database that your application can use. `depends_on` tells Docker Compose to
-# start the database before your application. The `db-data` volume persists the
-# database data between container restarts. The `db-password` secret is used
-# to set the database password. You must create `db/password.txt` and add
-# a password of your choosing to it before running `docker compose up`.
-#     depends_on:
-#       db:
-#         condition: service_healthy
-#   db:
-#     image: postgres
-#     restart: always
-#     user: postgres
-#     secrets:
-#       - db-password
-#     volumes:
-#       - db-data:/var/lib/postgresql/data
-#     environment:
-#       - POSTGRES_DB=example
-#       - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
-#     expose:
-#       - 5432
-#     healthcheck:
-#       test: [ "CMD", "pg_isready" ]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 5
-# volumes:
-#   db-data:
-# secrets:
-#   db-password:
-#     file: db/password.txt
+  redis:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/production/redis/Dockerfile
+    image: scraper-dash-redis
+    container_name: scraper-dash-redis
+
+  celery-worker-main:
+    <<: *server
+    deploy:
+      resources:
+        limits:
+          memory: 4G      # Leave 1GB for system
+          cpus: '3.5'     # Leave 0.5 CPU for system
+        reservations:
+          memory: 2G
+          cpus: '2'
+    environment:
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    image: scraper-dash-celery-worker-main
+    container_name: scraper-dash-celery-worker-main
+    ports: []
+    command: "/run-celery-worker-main"
+
+  celery-worker-controller:
+    <<: *server
+    image: scraper-dash-celery-worker-controller
+    container_name: scraper-dash-celery-worker-controller
+    ports: []
+    command: "/run-celery-worker-control"
 
 networks:
   sd-network:

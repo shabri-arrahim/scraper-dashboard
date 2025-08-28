@@ -42,6 +42,9 @@ jobs:
             CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
             RATE_LIMIT=100
 
+            CELERY_BROKER_URL=redis://redis:6379/0
+            CELERY_RESULT_BACKEND=redis://redis:6379/0
+
             # Application Settings
             DEBUG=false
             MAX_LOG_LINES=1000

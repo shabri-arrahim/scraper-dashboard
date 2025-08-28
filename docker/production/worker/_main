@@ -2,5 +2,8 @@
 
 set -e
 
-cd /app
-
+uv run celery -A app.core.celery_app worker \
+  --loglevel=info \
+  --concurrency=3 \
+  --max-tasks-per-child=1 \
+  --queues=main

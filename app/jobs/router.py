@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 # ---------------------------- JOBS ----------------------------
-@router.post("/jobs/start", response_model=JobResponse)
+@router.post("/start", response_model=JobResponse)
 async def start_job(
     script_id: Annotated[str, Form()],
     background_task: BackgroundTasks,
@@ -50,7 +50,7 @@ async def start_job(
     return job
 
 
-@router.post("/jobs/{job_id}/stop", response_model=JobResponse)
+@router.post("/{job_id}/stop", response_model=JobResponse)
 async def stop_script_job(job_id: int, db: AsyncSession = Depends(get_db)):
     """Stop a running script job"""
     job = await Job.get_by_id(session=db, job_id=job_id)
@@ -69,13 +69,13 @@ async def stop_script_job(job_id: int, db: AsyncSession = Depends(get_db)):
     return job
 
 
-@router.get("/jobs", response_model=List[JobResponse])
+@router.get("/", response_model=List[JobResponse])
 async def list_script_jobs(db: AsyncSession = Depends(get_db)):
     """List all script jobs"""
     return await Job.get_all(session=db)
 
 
-@router.get("/jobs/{job_id}", response_model=JobResponse)
+@router.get("/{job_id}", response_model=JobResponse)
 async def get_script_job(job_id: int, db: AsyncSession = Depends(get_db)):
     """Get script job details"""
     job = await Job.get_by_id(session=db, job_id=job_id)
@@ -84,7 +84,7 @@ async def get_script_job(job_id: int, db: AsyncSession = Depends(get_db)):
     return job
 
 
-@router.get("/jobs/running", response_model=List[JobResponse])
+@router.get("/running", response_model=List[JobResponse])
 async def list_running_scripts(db: AsyncSession = Depends(get_db)):
     """List all running scripts"""
     return await Job.get_running(session=db)

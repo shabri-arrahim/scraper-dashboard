@@ -1,9 +1,11 @@
 import os
+import signal
 import asyncio
 import subprocess
 import logging
 
 from typing import Callable, Optional, Any
+from celery import Task
 
 from app.common.log_handler import ScriptLogHandler
 from app.jobs.models import Job
@@ -16,7 +18,11 @@ from app.services import telegram
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(bind=True)
+class NoRetryTask(Task):
+    max_retries = 0
+
+
+@celery_app.task(bind=True, base=NoRetryTask)
 def run_script(
     self,
     job_id: int,
@@ -27,7 +33,7 @@ def run_script(
     asyncio.run(_run_script_async(job_id=job_id, script_id=script_id, **kwargs))
 
 
-@celery_app.task(bind=True)
+@celery_app.task(bind=True, base=NoRetryTask)
 def stop_script(self, job_id: int, **kwargs):
     """Celery task to stop a running script"""
     asyncio.run(_stop_script_async(job_id=job_id, **kwargs))
@@ -80,6 +86,7 @@ async def _read_stream(
 
 async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
     async with AsyncSessionLocal() as db:
+        process = None
         try:
             script = await Script.get_by_id(session=db, script_id=script_id)
             job = await Job.get_by_id(session=db, job_id=job_id)
@@ -92,7 +99,9 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
 
             if os.name == "nt":
                 process = await asyncio.create_subprocess_exec(
-                    f"python -u {script_path}",
+                    "python",
+                    "-u",
+                    script_path,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
                     env=extra_env,
@@ -101,7 +110,9 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
                 )
             else:
                 process = await asyncio.create_subprocess_exec(
-                    f"python -u {script_path}",
+                    "python",
+                    "-u",
+                    script_path,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
                     env=extra_env,
@@ -174,6 +185,7 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
 
             # Ensure process cleanup
             if process and process.returncode is None:
+                logger.info(f"Execute Kill process: {str(process.pid)}")
                 try:
                     if os.name == "nt":
                         # Kill entire process tree on Windows

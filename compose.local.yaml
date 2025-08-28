@@ -35,16 +35,16 @@ services:
 
   celery-worker-main:
     <<: *server
-    # deploy:
-    #   resources:
-    #     limits:
-    #       memory: 4G      # Leave 1GB for system
-    #       cpus: '3.5'     # Leave 0.5 CPU for system
-    #     reservations:
-    #       memory: 2G
-    #       cpus: '2'
-    # environment:
-    #   - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    deploy:
+      resources:
+        limits:
+          memory: 4G      # Leave 1GB for system
+          cpus: '3.5'     # Leave 0.5 CPU for system
+        reservations:
+          memory: 2G
+          cpus: '2'
+    environment:
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
     image: scraper-dash-celery-worker-main
     container_name: scraper-dash-celery-worker-main
     ports: []

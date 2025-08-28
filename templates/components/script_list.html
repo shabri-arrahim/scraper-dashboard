@@ -52,7 +52,7 @@
         {% if script.status == 'running' %}
         <button
           class="btn-danger text-white px-4 py-2 rounded-lg font-medium flex items-center"
-          hx-post="/scripts/jobs/{{ script.job_id }}/stop"
+          hx-post="/jobs/{{ script.job_id }}/stop"
           hx-target="#script-list"
           hx-swap="innerHTML"
         >
@@ -62,7 +62,7 @@
         {% else %}
         <button
           class="btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center"
-          hx-post="/scripts/jobs/start"
+          hx-post="/jobs/start"
           hx-vals='js:{"script_id": "{{ script.id }}"}'
           hx-target="#script-list"
           hx-swap="innerHTML"

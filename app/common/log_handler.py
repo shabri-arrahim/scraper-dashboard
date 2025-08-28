@@ -36,9 +36,10 @@ class ScriptLogHandler:
             mode = "a" if self.append_mode else "w"
             self.file_handler = logging.FileHandler(self.log_file, mode=mode)
             self.file_handler.setFormatter(
-                logging.Formatter(
-                    "%(asctime)s - %(levelname)s - [Job:%(job_id)s] %(message)s"
-                )
+                # logging.Formatter(
+                #     "%(asctime)s - %(levelname)s - [Job:%(job_id)s] %(message)s"
+                # )
+                logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
             )
 
             self.logger.setLevel(logging.INFO)

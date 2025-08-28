@@ -19,7 +19,7 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.get("", response_class=HTMLResponse)
 async def list_contents(request: Request):
     """Get downloadable content list"""
     downloadable_contents_path = settings.DOWNLOAD_DIR

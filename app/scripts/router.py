@@ -33,7 +33,7 @@ templates = Jinja2Templates(directory="templates")
 
 # ---------------------------- SCRIPTS ----------------------------
 # TODO: move all of the bussiness logic to service.py
-@router.get("/", response_model=List[ScriptResponse])
+@router.get("", response_model=List[ScriptResponse])
 async def list_scripts(request: Request, db: AsyncSession = Depends(get_db)):
     """List all scripts"""
     scripts = await Script.get_all_with_jobs(session=db)

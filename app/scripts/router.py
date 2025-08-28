@@ -120,8 +120,8 @@ async def delete_script(script_id: int, db: AsyncSession = Depends(get_db)):
             await db.execute(stmt)
             await db.commit()
 
-            log_handler = LogFileReader(script.name)
-            await sync_to_async(log_handler.delete_log_file)()
+        log_handler = LogFileReader(os.path.splitext(script.name)[0])
+        await sync_to_async(log_handler.delete_log_file)()
 
         if await async_os.path.exists(script_path):
             await async_os.unlink(script_path)

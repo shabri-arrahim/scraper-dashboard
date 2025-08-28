@@ -58,7 +58,7 @@ async def _read_stream(
             )
 
             if not line:
-                continue
+                break
 
             last_output_time = settings.TIME_NOW()
             streamed_line = line.decode().strip()
@@ -72,7 +72,6 @@ async def _read_stream(
                 case s if "Browser closed" in s:
                     callback("ℹ️  Browser session ended", level="INFO")
 
-            return output_lines
         except asyncio.TimeoutError as e:
             silence_duration = (settings.TIME_NOW() - last_output_time).total_seconds()
             if silence_duration > max_silence_duration:
@@ -82,6 +81,8 @@ async def _read_stream(
                 )
                 break
             continue
+
+    return output_lines
 
 
 async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
@@ -194,8 +195,14 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
                             capture_output=True,
                         )
                     else:
-                        # Kill process group on Unix
-                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                        pgid = os.getpgid(process.pid)
+                        current_pgid = os.getpgid(current_pid)
+
+                        if pgid != current_pgid:
+                            os.killpg(pgid, signal.SIGKILL)
+                        else:
+                            # Fallback to killing just the process
+                            os.kill(process.pid, signal.SIGKILL)
                 except (ProcessLookupError, OSError):
                     pass  # Process already dead
 

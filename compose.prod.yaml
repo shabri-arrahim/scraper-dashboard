@@ -24,7 +24,7 @@ services:
     networks:
       - sd-network
     volumes:
-      - ${HOME}/.scraper_dash:/sources
+      - ${HOME}/.scraper_dash:/app/sources
     command: /start
 
   redis:

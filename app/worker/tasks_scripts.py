@@ -123,7 +123,7 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
 
             with ScriptLogHandler(script_name=script.name) as script_log_handler:
                 output_lines = await _read_stream(process, script_log_handler.write)
-                script.log_file = script_log_handler.log_file
+                script.log_file = str(script_log_handler.log_file.name)
                 await db.commit()
 
             return_code = await process.wait()

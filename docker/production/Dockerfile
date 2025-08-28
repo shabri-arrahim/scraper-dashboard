@@ -20,18 +20,24 @@ ADD https://astral.sh/uv/0.8.6/install.sh /uv-installer.sh
 # Run the installer then remove it
 RUN sh /uv-installer.sh && rm /uv-installer.sh
 
+# Ensure the installed binary is on the `PATH`
+ENV PATH="/root/.local/bin/:$PATH"
+
 ARG UID=10001
 ARG GID=10001
 
 RUN addgroup --system --gid ${GID} fastapi \
     && adduser --system --uid ${UID} --ingroup fastapi fastapi
 
-COPY --chown=fastapi:fastapi /root/.local/bin/uv /home/fastapi/.local/bin/
+# Create directory and copy uv binary while still root
+RUN mkdir -p /home/fastapi/.local/bin/ \
+    && cp /root/.local/bin/uv /home/fastapi/.local/bin/uv \
+    && chown -R fastapi:fastapi /home/fastapi/.local
 
-# Ensure the installed binary is on the `PATH`
+# Update PATH for fastapi user
 ENV PATH="/home/fastapi/.local/bin/:$PATH"
 
-# Install dependencies
+# Install dependencies (still as root, but using fastapi cache)
 RUN --mount=type=cache,target=/home/fastapi/.cache/uv,uid=${UID},gid=${GID}  \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
@@ -57,10 +63,10 @@ USER fastapi
 WORKDIR /app
 
 # Copy the source code into the container.
-ADD . /app
+ADD --chown=fastapi:fastapi . /app
 
-# Sync the project
-RUN --mount=type=cache,target=/root/.cache/uv \
+# Sync the project (use fastapi cache, not root cache)
+RUN --mount=type=cache,target=/home/fastapi/.cache/uv,uid=${UID},gid=${GID} \
     uv sync --locked
 
 # Expose the port that the application listens on.

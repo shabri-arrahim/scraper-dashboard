@@ -26,6 +26,8 @@ ARG GID=10001
 RUN addgroup --system --gid ${GID} fastapi \
     && adduser --system --uid ${UID} --ingroup fastapi fastapi
 
+COPY --chown=fastapi:fastapi /root/.local/bin/uv /home/fastapi/.local/bin/
+
 # Ensure the installed binary is on the `PATH`
 ENV PATH="/home/fastapi/.local/bin/:$PATH"
 
@@ -38,15 +40,15 @@ RUN --mount=type=cache,target=/home/fastapi/.cache/uv,uid=${UID},gid=${GID}  \
 RUN uv run playwright install-deps chromium
 RUN uv run playwright install chromium
 
-COPY ./docker/production/web/start /start
+COPY --chown=fastapi:fastapi ./docker/production/web/start /start
 RUN sed -i 's/\r$//g' /start
 RUN chmod +x /start
 
-COPY ./docker/production/worker/_main /run-celery-worker-main
+COPY --chown=fastapi:fastapi ./docker/production/worker/_main /run-celery-worker-main
 RUN sed -i 's/\r$//g' /run-celery-worker-main
 RUN chmod +x /run-celery-worker-main
 
-COPY ./docker/production/worker/_control /run-celery-worker-control
+COPY --chown=fastapi:fastapi ./docker/production/worker/_control /run-celery-worker-control
 RUN sed -i 's/\r$//g' /run-celery-worker-control
 RUN chmod +x /run-celery-worker-control
 

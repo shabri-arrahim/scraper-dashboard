@@ -65,23 +65,6 @@ async def login(request: Request):
 @require_auth
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     """Main dashboard page"""
-    # scripts = await Script.get_all(session=db)
-
-    # if not scripts:
-    #     return templates.TemplateResponse(
-    #         "components/script_list.html", {"request": request, "scripts": []}
-    #     )
-
-    # scripts = [
-    #     {
-    #         "id": sc.id,
-    #         "name": sc.name,
-    #         "status": sc.job.status if sc.job else "stopped",
-    #         "has_logs": bool(sc.log_file and sc.job),
-    #         "job_id": sc.job.id if sc.job else None,
-    #     }
-    #     for sc in scripts
-    # ]
 
     return templates.TemplateResponse(
         "dashboard.html",

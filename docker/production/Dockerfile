@@ -27,7 +27,8 @@ ARG UID=10001
 ARG GID=10001
 
 RUN addgroup --system --gid ${GID} fastapi \
-    && adduser --system --uid ${UID} --ingroup fastapi fastapi
+    && adduser --system --uid ${UID} --ingroup fastapi fastapi \
+    --home /home/fastapi --create-home fastapi
 
 # Create directory and copy uv binary while still root
 RUN mkdir -p /home/fastapi/.local/bin/ \

@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     SCRIPTS_DIR: Path = SOURCE_DIR / "scripts"
     DOWNLOAD_DIR: Path = SOURCE_DIR / "downloads"
     SCRIPTS_ASSETS_DIR: Path = SCRIPTS_DIR / "assets"
-    LOGS_DIR: Path = BASE_DIR / "logs"
+    LOGS_DIR: Path = SOURCE_DIR / "logs"
 
     def _check_if_the_path_exist_or_create(self, path: Path) -> None:
         if path.exists():

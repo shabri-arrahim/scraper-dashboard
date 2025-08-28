@@ -55,7 +55,7 @@ class Settings(BaseSettings):
         return self
 
     # DATABASE CONFIGURATION
-    DATABASE_URL: str = f"sqlite:///{BASE_DIR}/data.db"
+    DATABASE_URL: str = f"sqlite:///{SOURCE_DIR}/data.db"
 
     # CELERY CONFIGURATION
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"

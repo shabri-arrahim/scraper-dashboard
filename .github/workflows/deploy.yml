@@ -66,3 +66,6 @@ jobs:
             else
               echo "No dangling images to remove."
             fi
+
+            # add continer to tunnel network
+            docker network connect tunnel scraper-dash-fastapi

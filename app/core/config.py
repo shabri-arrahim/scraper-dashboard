@@ -90,7 +90,7 @@ class Settings(BaseSettings):
             "style-src 'self' 'unsafe-inline' cdnjs.cloudflare.com;"
             "font-src 'self' cdnjs.cloudflare.com;"
             "img-src 'self' data:;"
-            "connect-src 'self' scraper-dash.ninoproject.my.id;"
+            "connect-src 'self' https://scraper-dash.ninoproject.my.id;"
         ),
         "Referrer-Policy": "strict-origin-when-cross-origin",
     }

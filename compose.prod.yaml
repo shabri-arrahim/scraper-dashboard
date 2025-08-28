@@ -13,8 +13,6 @@ services:
       context: .
     env_file:
       - .env
-    depends_on:
-      - selenium-hub
     container_name: scraper-dash
     environment:
       - ENVIRONMENT=production
@@ -23,31 +21,6 @@ services:
       - sd-network
     volumes:
       - ${HOME}/.scraper_dash:/appuser/.scraper_dash
-
-  chrome:
-    image: selenium/node-chrome:4.34.0-20250727
-    platform: linux/amd64
-    shm_size: 2gb
-    depends_on:
-      - selenium-hub
-    environment:
-      - SE_EVENT_BUS_HOST=selenium-hub
-      - SE_NODE_MAX_SESSIONS=10
-      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
-    networks:
-      - sd-network
-
-
-  selenium-hub:
-    image: selenium/hub:4.34.0-20250727
-    container_name: selenium-hub
-    ports:
-      - "4442:4442"
-      - "4443:4443"
-      - "4444:4444"
-    networks:
-      - sd-network
-
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to

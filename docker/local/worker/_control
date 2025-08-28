@@ -1,0 +1,9 @@
+#! /usr/bin/env bash
+
+set -e
+
+uv run celery -A app.core.celery_app worker \
+  --loglevel=info \
+  --concurrency=1 \
+  --max-tasks-per-child=100 \
+  --queues=control 

@@ -101,12 +101,8 @@
         <div
           class="overflow-y-auto max-h-[calc(100vh-24rem)] pr-2 -mr-2 custom-scrollbar"
         >
-          <div
-            id="download-list"
-            hx-get="/downloads"
-            hx-trigger="load, refresh"
-          >
-            {% include "components/download_list.html" %}
+          <div id="download-list" hx-get="/contents" hx-trigger="load, refresh">
+            {% include "components/content_list.html" %}
           </div>
         </div>
       </div>
@@ -146,11 +142,7 @@
         <div
           class="overflow-y-auto max-h-[calc(100vh-24rem)] pr-2 -mr-2 custom-scrollbar"
         >
-          <div
-            id="script-list"
-            hx-get="/scripts"
-            hx-trigger="load, every 5s, refresh"
-          >
+          <div id="script-list" hx-get="/scripts" hx-trigger="load, refresh">
             {% include "components/script_list.html" %}
           </div>
         </div>
@@ -190,7 +182,11 @@
         <div
           class="overflow-y-auto max-h-[calc(100vh-24rem)] pr-2 -mr-2 custom-scrollbar"
         >
-          <div id="assets-list" hx-get="/assets" hx-trigger="load, refresh">
+          <div
+            id="assets-list"
+            hx-get="/scripts/assets"
+            hx-trigger="load, refresh"
+          >
             {% include "components/assets_list.html" %}
           </div>
         </div>
@@ -273,7 +269,7 @@
         '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
       uploadButton.disabled = true;
 
-      const response = await fetch("/assets/upload", {
+      const response = await fetch("/scripts/assets/upload", {
         method: "POST",
         body: formData,
       });
@@ -359,28 +355,6 @@
     }
   }
 
-  async function deleteScript(scriptName) {
-    if (!confirm(`Are you sure you want to delete ${scriptName}?`)) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/scripts/${scriptName}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        htmx.trigger("#script-list", "refresh");
-      } else {
-        const result = await response.json();
-        throw new Error(result.error || "Delete failed");
-      }
-    } catch (error) {
-      console.error("Delete error:", error);
-      alert(error.message || "Failed to delete script. Please try again.");
-    }
-  }
-
   async function handleFileUpload(input) {
     if (!input.files || input.files.length === 0) return;
 
@@ -395,7 +369,7 @@
         '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
       uploadButton.disabled = true;
 
-      const response = await fetch("/upload", {
+      const response = await fetch("/contents/upload", {
         method: "POST",
         body: formData,
       });

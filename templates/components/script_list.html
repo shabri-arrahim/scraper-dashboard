@@ -28,7 +28,10 @@
         <!-- Delete Button -->
         <button
           class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center"
-          onclick="deleteScript('{{ script.name }}')"
+          hx-delete="/scripts/{{ script.id }}"
+          hx-target="#script-list"
+          hx-swap="innerHTML"
+          hx-confirm="Are you sure you want to delete {{ script.name }}?"
           {% if script.status == 'running' %}disabled{% endif %}
         >
           <i class="fas fa-trash-alt mr-2"></i>
@@ -38,7 +41,7 @@
         {% if script.has_logs %}
         <button
           class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center"
-          onclick="openLogModal('{{ script.name }}')"
+          onclick="openLogModal('{{ script.id }}')"
         >
           <i class="fas fa-file-alt mr-2"></i>
           Logs
@@ -49,7 +52,7 @@
         {% if script.status == 'running' %}
         <button
           class="btn-danger text-white px-4 py-2 rounded-lg font-medium flex items-center"
-          hx-post="/scripts/{{ script.name }}/stop"
+          hx-post="/scripts/jobs/{{ script.job_id }}/stop"
           hx-target="#script-list"
           hx-swap="innerHTML"
         >
@@ -59,7 +62,8 @@
         {% else %}
         <button
           class="btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center"
-          hx-post="/scripts/{{ script.name }}/start"
+          hx-post="/scripts/jobs/start"
+          hx-vals='js:{"script_id": "{{ script.id }}"}'
           hx-target="#script-list"
           hx-swap="innerHTML"
         >

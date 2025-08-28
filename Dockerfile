@@ -1,13 +1,5 @@
-# syntax=docker/dockerfile:1
-
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Dockerfile reference guide at
-# https://docs.docker.com/go/dockerfile-reference/
-
-# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
-
 ARG PYTHON_VERSION=3.13
-FROM python:${PYTHON_VERSION}-slim as base
+FROM python:${PYTHON_VERSION}-slim-bookworm as base
 
 # Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -28,47 +20,38 @@ ADD https://astral.sh/uv/0.8.6/install.sh /uv-installer.sh
 # Run the installer then remove it
 RUN sh /uv-installer.sh && rm /uv-installer.sh
 
-# Create a non-privileged user that the app will run under.
-# See https://docs.docker.com/go/dockerfile-user-best-practices/
-ARG UID=10001
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/appuser" \
-    --shell "/sbin/nologin" \
-    --uid "${UID}" \
-    appuser
-
-# Create necessary directories and set permissions for appuser
-RUN mkdir -p /appuser/.local/bin /appuser/.cache/uv && \
-    cp /root/.local/bin/uv /appuser/.local/bin/ && \
-    chown -R appuser:appuser /appuser && \
-    chmod -R 777 /appuser/.cache
-
-# Set PATH for appuser
-ENV PATH="/appuser/.local/bin:$PATH"
-
-# Switch to the non-privileged user to run the application.
-USER appuser
-
-WORKDIR /app
+# Ensure the installed binary is on the `PATH`
+ENV PATH="/root/.local/bin/:$PATH"
 
 # Install dependencies
-RUN --mount=type=cache,target=/appuser/.cache/uv,uid=10001 \
+RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --locked --no-install-project
 
-# Copy the source code into the container.
-COPY . .
+RUN uv run playwright install-deps chromium
+RUN uv run playwright install chromium
 
-# Expose the port that the application listens on.
+COPY ./docker/local/web/start /start
+RUN sed -i 's/\r$//g' /start
+RUN chmod +x /start
+
+COPY ./docker/local/worker/_main /run-celery-worker-main
+RUN sed -i 's/\r$//g' /run-celery-worker-main
+RUN chmod +x /run-celery-worker-main
+
+COPY ./docker/local/worker/_control /run-celery-worker-control
+RUN sed -i 's/\r$//g' /run-celery-worker-control
+RUN chmod +x /run-celery-worker-control
+
+WORKDIR /app
+
+# Copy the source code into the container.
+ADD . /app
 
 # Sync the project
-RUN --mount=type=cache,target=/appuser/.cache/uv,uid=10001 \
+RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
 
+# Expose the port that the application listens on.
 EXPOSE 80
-
-# Run the application.
-CMD [ "uv", "run", "main.py" ]

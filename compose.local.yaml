@@ -8,35 +8,55 @@
 # database or a cache. For examples, see the Awesome Compose repository:
 # https://github.com/docker/awesome-compose
 services:
-  server:
+  server: &server
+    restart: unless-stopped
     build:
       context: .
     env_file:
       - .env
+    image: scraper-dash-fastapi
+    container_name: scraper-dash-fastapi
+    volumes: 
+      - .:/app:z
+      - /app/.venv
     depends_on:
-      - selenium-hub
-    container_name: scraper-dash
+      - redis
     ports:
-      - 9000:8000
+      - 9000:80
+    command: "/start"
 
-  chrome:
-    image: selenium/node-chrome:4.34.0-20250727
-    platform: linux/amd64
-    shm_size: 2gb
-    depends_on:
-      - selenium-hub
-    environment:
-      - SE_EVENT_BUS_HOST=selenium-hub
-      - SE_NODE_MAX_SESSIONS=10
-      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+  redis:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/local/redis/Dockerfile
+    image: scraper-dash-redis
+    container_name: scraper-dash-redis
 
-  selenium-hub:
-    image: selenium/hub:4.34.0-20250727
-    container_name: selenium-hub
-    ports:
-      - "4442:4442"
-      - "4443:4443"
-      - "4444:4444"
+  celery-worker-main:
+    <<: *server
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 4G      # Leave 1GB for system
+    #       cpus: '3.5'     # Leave 0.5 CPU for system
+    #     reservations:
+    #       memory: 2G
+    #       cpus: '2'
+    # environment:
+    #   - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    image: scraper-dash-celery-worker-main
+    container_name: scraper-dash-celery-worker-main
+    ports: []
+    command: "/run-celery-worker-main"
+
+  celery-worker-controller:
+    <<: *server
+    image: scraper-dash-celery-worker-controller
+    container_name: scraper-dash-celery-worker-controller
+    ports: []
+    command: "/run-celery-worker-control"
+    
 
 
 # The commented out section below is an example of how to define a PostgreSQL

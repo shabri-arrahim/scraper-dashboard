@@ -190,12 +190,12 @@
         }
       }
 
-      function openLogModal(scriptName) {
-        window.currentScript = scriptName;
+      function openLogModal(scriptId) {
+        window.currentScript = scriptId;
         document.getElementById("logModal").classList.remove("hidden");
         document.getElementById("logModalTitle").textContent =
-          scriptName + " - Logs";
-        loadLogs(scriptName);
+          scriptId + " - Logs";
+        loadLogs(scriptId);
       }
 
       function closeLogModal() {
@@ -209,9 +209,9 @@
         }
       }
 
-      async function loadLogs(scriptName) {
+      async function loadLogs(scriptId) {
         try {
-          const response = await fetch(`/scripts/${scriptName}/logs`);
+          const response = await fetch(`/scripts/${scriptId}/logs`);
           const data = await response.json();
 
           const logContent = document.getElementById("logContent");
@@ -236,11 +236,6 @@
             '<div class="text-red-400">Error loading logs</div>';
         }
       }
-
-      // Auto-refresh script list every 5 seconds
-      setInterval(() => {
-        htmx.trigger("#script-list", "refresh");
-      }, 5000);
 
       // Auto-refresh logs every 3 seconds when modal is open
       setInterval(() => {

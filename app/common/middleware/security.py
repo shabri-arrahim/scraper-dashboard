@@ -6,7 +6,8 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from config import config
+
+from app.core.config import settings
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -22,20 +23,20 @@ def setup_middleware(app: FastAPI) -> None:
     # CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=config.CORS_ORIGINS,
+        allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
     # Trusted Hosts
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.ALLOWED_HOSTS)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
 
     # Security Headers
     class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request, call_next):
             response = await call_next(request)
-            for header, value in config.SECURITY_HEADERS.items():
+            for header, value in settings.SECURITY_HEADERS.items():
                 response.headers[header] = value
             return response
 

@@ -1,20 +1,21 @@
-from functools import wraps
-from typing import List, Optional
-from fastapi import HTTPException, Request
-from fastapi.responses import RedirectResponse
 import secrets
 import hashlib
-from config import config
+
+from functools import wraps
+from fastapi import Request
+from fastapi.responses import RedirectResponse
+
+from app.core.config import settings
 
 
 def verify_token(token: str) -> bool:
     """Verify if the token is valid"""
-    if not token or not config.API_TOKEN:
+    if not token or not settings.API_TOKEN:
         return False
     # Compare tokens in a secure way using secrets
     return secrets.compare_digest(
         hashlib.sha256(token.encode()).hexdigest(),
-        hashlib.sha256(config.API_TOKEN.encode()).hexdigest(),
+        hashlib.sha256(settings.API_TOKEN.encode()).hexdigest(),
     )
 
 

@@ -91,7 +91,7 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
         try:
             script = await Script.get_by_id(session=db, script_id=script_id)
             job = await Job.get_by_id(session=db, job_id=job_id)
-            script_path = settings.SCRIPTS_DIR / script.name
+            script_path = settings.SCRIPTS_DIR / f"{script.name}.py"
 
             if not job:
                 raise ValueError(f"Can't find job with ID: {job_id}")
@@ -145,8 +145,23 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
 
                 # Check for common Playwright errors in output
                 output_text = "\n".join(output_lines[-20:])  # Last 20 lines
+
+                # Telegram Error Message
+                telegram_error_meesage = ""
+                idx = len(output_text) - 1
+                while idx > 0:
+                    telegram_error_meesage = (
+                        output_text[idx].strip() + " " + telegram_error_meesage
+                    )
+                    if (
+                        len(f"{error_msg}:\n{telegram_error_meesage}")
+                        >= telegram.MAX_TELEGRAM_MESSAGE_CHAR
+                    ):
+                        break
+                    idx -= 1
+
                 await telegram.send_message(
-                    f"{error_msg}:\n{output_text}",
+                    f"{telegram_error_meesage}",
                     settings.TELEGRAM_CHAT_ID,
                 )
                 match output_text:

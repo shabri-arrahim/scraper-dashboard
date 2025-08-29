@@ -35,11 +35,6 @@ RUN mkdir -p /home/fastapi/.local/bin/ \
     && cp /root/.local/bin/uv /home/fastapi/.local/bin/uv \
     && chown -R fastapi:fastapi /home/fastapi/.local
 
-
-RUN mkdir /ms-playwright \
-    && mv ~/.cache/ms-playwright/* /ms-playwright \
-    && chown -R fastapi:fastapi /ms-playwright
-
 # Update PATH for fastapi user
 ENV PATH="/home/fastapi/.local/bin/:$PATH"
 
@@ -51,6 +46,10 @@ RUN --mount=type=cache,target=/home/fastapi/.cache/uv,uid=${UID},gid=${GID}  \
 
 RUN uv run playwright install-deps chromium
 RUN uv run playwright install chromium
+
+RUN mkdir /ms-playwright \
+    && mv ~/.cache/ms-playwright/* /ms-playwright \
+    && chown -R fastapi:fastapi /ms-playwright
 
 COPY --chown=fastapi:fastapi ./docker/production/web/start /start
 RUN sed -i 's/\r$//g' /start

@@ -160,6 +160,8 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
                         break
                     idx -= 1
 
+                logger.info(f"{len(telegram_error_meesage)=}")
+                logger.info(f"{telegram_error_meesage=}")
                 await telegram.send_message(
                     f"{telegram_error_meesage}",
                     settings.TELEGRAM_CHAT_ID,

@@ -35,6 +35,9 @@ RUN mkdir -p /home/fastapi/.local/bin/ \
     && cp /root/.local/bin/uv /home/fastapi/.local/bin/uv \
     && chown -R fastapi:fastapi /home/fastapi/.local
 
+
+RUN mkdir /ms-playwright && mv ~/.cache/ms-playwright/* /ms-playwright 
+
 # Update PATH for fastapi user
 ENV PATH="/home/fastapi/.local/bin/:$PATH"
 

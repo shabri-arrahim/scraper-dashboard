@@ -37,6 +37,7 @@ async def start_job(
     )
 
     job.celery_task_id = task.id
+    job.script_id = script.id
     job.status = "running"
     await db.commit()
     await db.refresh(job)

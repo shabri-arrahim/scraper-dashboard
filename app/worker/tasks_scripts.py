@@ -147,23 +147,23 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
                 output_text = "\n".join(output_lines[-20:])  # Last 20 lines
 
                 # Telegram Error Message
-                telegram_error_meesage = ""
-                idx = len(output_text) - 1
-                while idx > 0:
-                    telegram_error_meesage = (
-                        output_text[idx].strip() + " " + telegram_error_meesage
-                    )
-                    if (
-                        len(f"{error_msg}:\n{telegram_error_meesage}")
-                        >= settings.TELEGRAM_MAX_MESSAGE_CHAR
-                    ):
-                        break
-                    idx -= 1
+                # telegram_error_meesage = ""
+                # idx = len(output_text) - 1
+                # while idx > 0:
+                #     telegram_error_meesage = (
+                #         output_text[idx].strip() + " " + telegram_error_meesage
+                #     )
+                #     if (
+                #         len(f"{error_msg}:\n{telegram_error_meesage}")
+                #         >= settings.TELEGRAM_MAX_MESSAGE_CHAR
+                #     ):
+                #         break
+                #     idx -= 1
 
-                logger.info(f"{len(telegram_error_meesage)=}")
-                logger.info(f"{telegram_error_meesage=}")
+                # logger.info(f"{len(telegram_error_meesage)=}")
+                # logger.info(f"{telegram_error_meesage=}")
                 await telegram.send_message(
-                    f"{telegram_error_meesage}",
+                    error_msg,
                     settings.TELEGRAM_CHAT_ID,
                 )
                 match output_text:

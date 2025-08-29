@@ -37,7 +37,7 @@ async def list_contents(request: Request):
                         "last_modified": datetime.datetime.fromtimestamp(
                             stat.st_mtime
                         ).strftime("%Y-%m-%d %H:%M:%S"),
-                        "download_url": f"/download/{content_file.name}",
+                        "download_url": f"/contents/download/{content_file.name}",
                     }
                 )
 

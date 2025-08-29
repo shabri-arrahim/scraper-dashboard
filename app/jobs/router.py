@@ -39,8 +39,11 @@ async def start_job(
     job.celery_task_id = task.id
     job.script_id = script.id
     job.status = "running"
+    # TODO: Add handler delete script_file value if job failed to create
+    script.log_file = f"{script.name}.log"
     await db.commit()
     await db.refresh(job)
+    await db.refresh(script)
 
     background_task.add_task(
         telegram.send_message,

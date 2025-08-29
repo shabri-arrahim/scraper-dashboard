@@ -155,7 +155,7 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
                     )
                     if (
                         len(f"{error_msg}:\n{telegram_error_meesage}")
-                        >= telegram.MAX_TELEGRAM_MESSAGE_CHAR
+                        >= settings.TELEGRAM_MAX_MESSAGE_CHAR
                     ):
                         break
                     idx -= 1

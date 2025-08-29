@@ -23,8 +23,6 @@ class Settings(BaseSettings):
         []
     )
     RATE_LIMIT: int  # Requests per minute
-    TELEGRAM_BOT_TOKEN: Optional[str] = None
-    TELEGRAM_CHAT_ID: Optional[str] = None
 
     # DIRECTORY CONFIGURATIONS
     BASE_DIR: Path = Path(__file__).parent.parent.parent
@@ -56,6 +54,11 @@ class Settings(BaseSettings):
 
     # DATABASE CONFIGURATION
     DATABASE_URL: str = f"sqlite:///{SOURCE_DIR}/data.db"
+
+    # TELEGRAM CONFIGURATION
+    TELEGRAM_BOT_TOKEN: Optional[str] = None
+    TELEGRAM_CHAT_ID: Optional[str] = None
+    TELEGRAM_MAX_MESSAGE_CHAR: int = 4090
 
     # CELERY CONFIGURATION
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"

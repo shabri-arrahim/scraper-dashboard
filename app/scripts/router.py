@@ -80,7 +80,7 @@ async def upload_script(
             while chunk := await file.read(8192):
                 await buffer.write(chunk)
 
-        script = await Script.create(session=db, name=new_filename)
+        script = await Script.create(session=db, name=os.path.splitext(new_filename)[0])
 
         return {"success": True, "filename": script.name}
     except Exception as e:
@@ -103,7 +103,7 @@ async def delete_script(script_id: int, db: AsyncSession = Depends(get_db)):
                 detail=f"Can't delete script with ID {script_id}, script are not found",
             )
 
-        script_path = settings.SCRIPTS_DIR / script.name
+        script_path = settings.SCRIPTS_DIR / f"{script.name}.py"
 
         stmt = select(Job).where(Job.script_id == script_id)
         result = await db.execute(stmt)
@@ -120,7 +120,7 @@ async def delete_script(script_id: int, db: AsyncSession = Depends(get_db)):
             await db.execute(stmt)
             await db.commit()
 
-        log_handler = LogFileReader(os.path.splitext(script.name)[0])
+        log_handler = LogFileReader(script.name)
         await sync_to_async(log_handler.delete_log_file)()
 
         if await async_os.path.exists(script_path):
@@ -143,7 +143,7 @@ async def delete_script(script_id: int, db: AsyncSession = Depends(get_db)):
 async def get_script_log(script_id: int, db: AsyncSession = Depends(get_db)):
     try:
         script = await Script.get_by_id_with_job(session=db, script_id=script_id)
-        log_handler = LogFileReader(script_name=os.path.splitext(script.name)[0])
+        log_handler = LogFileReader(script_name=script.name)
 
         if not log_handler.log_file.exists():
             return HTTPException(status_code=404, detail="can't find log")

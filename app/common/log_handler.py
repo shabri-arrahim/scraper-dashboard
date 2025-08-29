@@ -1,4 +1,3 @@
-import os
 import time
 import logging
 
@@ -10,7 +9,7 @@ from app.core.config import settings
 
 class ScriptLogHandler:
     def __init__(self, script_name: str, append_mode: bool = True):
-        self.script_name = os.path.splitext(script_name)[0]
+        self.script_name = script_name
         self.append_mode = append_mode
 
         # Create consistent log file name (no timestamp)

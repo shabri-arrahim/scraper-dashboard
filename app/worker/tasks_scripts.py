@@ -3,6 +3,7 @@ import signal
 import asyncio
 import subprocess
 import logging
+import celery.exceptions
 
 from typing import Callable, Optional, Any
 from celery import Task
@@ -14,6 +15,7 @@ from app.core.celery_app import celery_app
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.services import telegram
+from app.utils import filesystem
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +32,52 @@ def run_script(
     **kwargs,
 ):
     """Celery task to run a Python script"""
-    asyncio.run(_run_script_async(job_id=job_id, script_id=script_id, **kwargs))
+    try:
+        return asyncio.run(
+            _run_script_async(job_id=job_id, script_id=script_id, **kwargs)
+        )
+    except celery.exceptions.SoftTimeLimitExceeded as e:
+        asyncio.run(_cleanup_on_soft_timeout(job_id=job_id))
 
 
 @celery_app.task(bind=True, base=NoRetryTask)
 def stop_script(self, job_id: int, **kwargs):
     """Celery task to stop a running script"""
-    asyncio.run(_stop_script_async(job_id=job_id, **kwargs))
+    return asyncio.run(_stop_script_async(job_id=job_id, **kwargs))
+
+
+async def _cleanup_on_soft_timeout(job_id: int):
+    async with AsyncSessionLocal() as db:
+        try:
+            job = await Job.get_by_id(session=db, job_id=job_id)
+
+            if not job:
+                logger.info(f"Job with ID {job_id} are not found")
+                return
+
+            logger.info(f"Starting remove task with job ID {job_id} due soft timeout")
+            await filesystem.kill_process(os.name, job.pid)
+
+            job.status = "stopped"
+            job.end_time = settings.TIME_NOW()
+            job.error_message = (
+                "Task terminated gracefully due to soft time limit (revocation)"
+            )
+            await db.commit()
+
+            await telegram.send_message(
+                f"🔄 Task for job {job_id} was terminated gracefully",
+                settings.TELEGRAM_CHAT_ID,
+            )
+
+            logger.info(f"Cleanup completed for job {job_id}")
+
+        except Exception as e:
+            logger.error(f"Error during soft timeout cleanup for job {job_id}: {e}")
+            job.status = "failed"
+            job.end_time = settings.TIME_NOW()
+            job.error_message = f"Cleanup failed during termination: {str(e)}"
+            await db.commit()
 
 
 async def _read_stream(
@@ -117,10 +158,12 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
                     env=extra_env,
-                    preexec_fn=os.setsid(),
+                    preexec_fn=os.setsid,
                     cwd=settings.SCRIPTS_DIR,
                 )
 
+            await asyncio.sleep(0.1)  # Let process initialize
+            job.pid = process.pid
             with ScriptLogHandler(script_name=script.name) as script_log_handler:
                 output_lines = await _read_stream(process, script_log_handler.write)
 
@@ -202,24 +245,9 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
             # Ensure process cleanup
             if process and process.returncode is None:
                 logger.info(f"Execute Kill process: {str(process.pid)}")
-                try:
-                    if os.name == "nt":
-                        # Kill entire process tree on Windows
-                        subprocess.run(
-                            ["taskkill", "/F", "/T", "/PID", str(process.pid)],
-                            capture_output=True,
-                        )
-                    else:
-                        pgid = os.getpgid(process.pid)
-                        current_pgid = os.getpgid(current_pid)
-
-                        if pgid != current_pgid:
-                            os.killpg(pgid, signal.SIGKILL)
-                        else:
-                            # Fallback to killing just the process
-                            os.kill(process.pid, signal.SIGKILL)
-                except (ProcessLookupError, OSError):
-                    pass  # Process already dead
+                await filesystem.kill_process(
+                    system_typ=os.name, process_id=process.pid
+                )
 
             # Update job status
             if "job" in locals() and job:
@@ -265,12 +293,12 @@ async def _stop_script_async(job_id: int, **kwargs):
                     # Unix - kill process group (includes browser processes)
                     try:
                         # First try graceful termination
-                        os.killpg(os.getpgid(job.pid), signal.SIGTERM)
+                        os.kill(job.pid, signal.SIGTERM)
                         await asyncio.sleep(5)  # Give it 5 seconds
 
                         # Then force kill if still running
                         try:
-                            os.killpg(os.getpgid(job.pid), signal.SIGKILL)
+                            os.kill(job.pid, signal.SIGKILL)
                         except ProcessLookupError:
                             pass  # Already terminated
                     except ProcessLookupError:

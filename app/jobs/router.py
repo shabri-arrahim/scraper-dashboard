@@ -9,8 +9,9 @@ from app.core.database import get_db
 from app.jobs.schemas import JobResponse
 from app.scripts.models import Script
 from app.jobs.models import Job
-from app.worker.tasks_scripts import run_script, stop_script
+from app.worker.tasks_scripts import run_script
 from app.services import telegram
+from app.core.celery_app import celery_app
 
 router = APIRouter()
 
@@ -64,11 +65,8 @@ async def stop_script_job(job_id: int, db: AsyncSession = Depends(get_db)):
     if job.status != "running":
         raise HTTPException(status_code=400, detail="Job is not running")
 
-    stop_script.apply_async(
-        job.id,
-        exchange="control",
-        routing_key="control",
-    )
+    worker_id = job.celery_task_id
+    celery_app.control.revoke(worker_id)
 
     return job
 

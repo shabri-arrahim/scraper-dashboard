@@ -66,7 +66,7 @@ async def stop_script_job(job_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Job is not running")
 
     worker_id = job.celery_task_id
-    celery_app.control.revoke(worker_id, terminated=True, signal="SIGUSR2")
+    celery_app.control.revoke(worker_id)
 
     return job
 

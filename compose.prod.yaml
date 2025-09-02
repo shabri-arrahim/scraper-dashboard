@@ -45,7 +45,7 @@ services:
           memory: 4G      # Leave 1GB for system
           cpus: '3.5'     # Leave 0.5 CPU for system
         reservations:
-          memory: 2G
+          memory: 2.5G
           cpus: '2'
     environment:
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright

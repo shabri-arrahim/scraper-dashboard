@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     CELERY_TASK_ACKS_LATE: bool = False  # Acknowledge immediately to prevent duplicates
     # === Memory Management ===
     CELERY_WORKER_MAX_MEMORY_PER_CHILD: int = (
-        1000000  # 1GB per worker (kill if exceeded)
+        1024 * 1024 * 1024  # 1GB per worker (kill if exceeded)
     )
     CELERY_WORKER_MAX_TASKS_PER_CHILD: int = (
         10  # Restart after 10 tasks for memory cleanup

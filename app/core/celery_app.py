@@ -23,6 +23,9 @@ celery_app.conf.update(
     worker_redirect_stdouts=False,
 )
 
+# Timezone
+celery_app.conf.timezone = "Asia/Jakarta"
+celery_app.conf.enable_utc = True
 
 celery_app.conf.task_default_exchange = "main"
 celery_app.conf.task_default_routing_key = "main"

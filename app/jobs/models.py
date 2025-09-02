@@ -77,5 +77,5 @@ class Job(Base):
             raise ValueError(f"Job with ID {job_id} not found")
         job.pid = process_id
         await session.commit()
-        await session.refresh()
+        await session.refresh(job)
         return job

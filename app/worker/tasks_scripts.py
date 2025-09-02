@@ -23,13 +23,13 @@ logger = logging.getLogger(__name__)
 class NoRetryTask(Task):
     max_retries = 0
 
-    def apply_async(self, *args, **kwargs):
-        # Add task_id if not present to ensure idempotency
-        if "task_id" not in kwargs:
-            kwargs["task_id"] = (
-                f"{kwargs.get('kwargs', {}).get('job_id', '')}-{kwargs.get('kwargs', {}).get('script_id', '')}"
-            )
-        return super().apply_async(*args, **kwargs)
+    # def apply_async(self, *args, **kwargs):
+    #     # Add task_id if not present to ensure idempotency
+    #     if "task_id" not in kwargs:
+    #         kwargs["task_id"] = (
+    #             f"{kwargs.get('kwargs', {}).get('job_id', '')}-{kwargs.get('kwargs', {}).get('script_id', '')}"
+    #         )
+    #     return super().apply_async(*args, **kwargs)
 
 
 @celery_app.task(bind=True, base=NoRetryTask)
@@ -42,13 +42,13 @@ def run_script(
     """Celery task to run a Python script"""
     try:
         # Check if task is already running or completed
-        if self.request.id:
-            result = celery_app.AsyncResult(self.request.id)
-            if result.ready():
-                logger.info(
-                    f"Task {self.request.id} already completed with status: {result.status}"
-                )
-                return result.result
+        # if self.request.id:
+        #     result = celery_app.AsyncResult(self.request.id)
+        #     if result.ready():
+        #         logger.info(
+        #             f"Task {self.request.id} already completed with status: {result.status}"
+        #         )
+        #         return result.result
 
         return asyncio.run(
             _run_script_async(job_id=job_id, script_id=script_id, **kwargs)

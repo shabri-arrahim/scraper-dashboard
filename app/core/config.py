@@ -66,13 +66,13 @@ class Settings(BaseSettings):
     # === Core Worker Settings ===
     CELERY_WORKER_CONCURRENCY: int = 3  # 3 workers max
     CELERY_WORKER_PREFETCH_MULTIPLIER: int = 1  # One task per worker
-    CELERY_TASK_ACKS_LATE: bool = True  # Acknowledge after completion
+    CELERY_TASK_ACKS_LATE: bool = False  # Acknowledge immediately to prevent duplicates
     # === Memory Management ===
     CELERY_WORKER_MAX_MEMORY_PER_CHILD: int = (
         1000000  # 1GB per worker (kill if exceeded)
     )
     CELERY_WORKER_MAX_TASKS_PER_CHILD: int = (
-        1  # Restart after each task (memory cleanup)
+        10  # Restart after 10 tasks for memory cleanup
     )
     # === Timeouts For 24-Hour Tasks ===
     CELERY_TASK_SOFT_TIME_LIMIT: int = 25 * 60 * 60  # 25 hours (25 * 60 * 60)

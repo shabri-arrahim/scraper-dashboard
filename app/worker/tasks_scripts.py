@@ -163,7 +163,9 @@ async def _run_script_async(job_id: int, script_id: str, **kwargs) -> None:
                 )
 
             await asyncio.sleep(0.1)  # Let process initialize
-            job.pid = process.pid
+            await Job.update_process_id(
+                session=db, job_id=job_id, process_id=process.pid
+            )
             with ScriptLogHandler(script_name=script.name) as script_log_handler:
                 output_lines = await _read_stream(process, script_log_handler.write)
 

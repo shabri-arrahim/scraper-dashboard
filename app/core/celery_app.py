@@ -36,15 +36,15 @@ celery_app.conf.task_queues = (
             "x-message-ttl": 86400000,  # 24 hours TTL
         },
     ),
-    Queue(
-        "control",
-        exchange=Exchange("control", type="direct"),
-        routing_key="control",
-        queue_arguments={
-            "x-max-priority": 255,
-            "x-message-ttl": 3600000,
-        },
-    ),
+    # Queue(
+    #     "control",
+    #     exchange=Exchange("control", type="direct"),
+    #     routing_key="control",
+    #     queue_arguments={
+    #         "x-max-priority": 255,
+    #         "x-message-ttl": 3600000,
+    #     },
+    # ),
 )
 
 # celery_app.conf.task_routes = {

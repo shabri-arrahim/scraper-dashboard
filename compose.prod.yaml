@@ -54,12 +54,12 @@ services:
     ports: []
     command: "/run-celery-worker-main"
 
-  celery-worker-controller:
-    <<: *server
-    image: scraper-dash-celery-worker-controller
-    container_name: scraper-dash-celery-worker-controller
-    ports: []
-    command: "/run-celery-worker-control"
+  # celery-worker-controller:
+  #   <<: *server
+  #   image: scraper-dash-celery-worker-controller
+  #   container_name: scraper-dash-celery-worker-controller
+  #   ports: []
+  #   command: "/run-celery-worker-control"
 
 networks:
   sd-network:

@@ -40,10 +40,10 @@ def run_script(
         asyncio.run(_cleanup_on_soft_timeout(job_id=job_id))
 
 
-@celery_app.task(bind=True, base=NoRetryTask)
-def stop_script(self, job_id: int, **kwargs):
-    """Celery task to stop a running script"""
-    return asyncio.run(_stop_script_async(job_id=job_id, **kwargs))
+# @celery_app.task(bind=True, base=NoRetryTask)
+# def stop_script(self, job_id: int, **kwargs):
+#     """Celery task to stop a running script"""
+#     return asyncio.run(_stop_script_async(job_id=job_id, **kwargs))
 
 
 async def _cleanup_on_soft_timeout(job_id: int):
